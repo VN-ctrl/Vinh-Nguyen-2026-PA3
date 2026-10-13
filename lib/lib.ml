@@ -1,5 +1,7 @@
 (************************************************************************
 0. Fill your name and OU ID or PID on the line below:
+  Vinh Nguyen
+  vn826023@ohio.edu
  *)
 
 open QCheck
@@ -43,8 +45,14 @@ let rec nodup (l : 'a list) : bool =
    containing all the same elements as the input except for
    duplicates. Hint: structural recursion and List.filter. *)
 
-let rec dedup (l : 'a list) : 'a list =
-  todo (dedup, l) (* replace with your solution *)
+let dedup (l : 'a list) : 'a list =
+  let rec go seen = function
+    | [] -> List.rev seen
+    | x :: xs -> if List.mem x seen then go seen xs else go (x :: seen) xs
+  in
+  match l with
+  | [] -> []
+  | x :: xs -> go [x] xs
 
 let () = add_test "dedup" @@
            fun _ ->
@@ -93,22 +101,26 @@ module ListSet : functor (T : Type) ->
        to preserve the ListSet invariant: no duplicates! Hint:
        'List.mem' could be useful. https://v2.ocaml.org/api/List.html *)
     let insert (x : elt) (l : elt list) : elt list =
-      todo (x, l) (* replace with your solution *)
+      if List.mem x l then l else x :: l
 
     (** 3. (10 pts) Write the 'elem' function for ListSets. This should
        be easy if you attended class on Sep 7 :) *)
     let rec elem (x : elt) (l : elt list) : bool =
-      todo (elem, x, l) (* replace with your solution *) 
+      match l with
+      | [] -> false
+      | y :: ys -> x = y || elem x ys
 
     (** 4. (10 pts) Write the 'union' function for ListSets. Hint:
        'insert' could be useful. *)
     let rec union (a : elt list) (b : elt list) : elt list =
-      todo (union, a, b) (* replace with your solution *)
+      match b with
+      | [] -> a
+      | x :: xs -> union (insert x a) xs
 
     (** 5. (10 pts) Write the 'intersection' function for
        ListSets. Hint: 'List.filter' could be useful. *)
     let intersection (a : elt list) (b : elt list) : elt list =
-      todo (a, b) (* replace with your solution *)
+      List.filter (fun x -> List.mem x b) a
 
     (* Use dedup to establish the ListSet invariant. *)
     let of_list = dedup
@@ -205,18 +217,31 @@ module BstSet : functor (Ord : OType) ->
     (** 6. (10 pts) Write an 'insert' function for inserting a single
        element into a BST. Make sure to preserve the BST invariant! *)
     let rec insert (x : elt) (t : elt bst) : elt bst =
-      todo (insert, x, t) (* replace with your solution *)
+      match t with
+      | Leaf -> Node (x, Leaf, Leaf)
+      | Node (y, l, r) ->
+         if x = y then Node (y, l, r)
+         else if Ord.le x y then Node (y, insert x l, r)
+         else Node (y, l, insert x r)
 
     (** 7. (10 pts) Write a 'union' function for taking the union of
        two BSTs. Hint: structural recursion and 'insert'. *)
     let rec union (a : elt bst) (b : elt bst) : elt bst =
-      todo (union, a, b) (* replace with your solution *)
+      match b with
+      | Leaf -> a
+      | Node (x, l, r) -> union (union (insert x a) l) r
 
     (** 8. (10 pts) Write an 'intersection' function for taking the
        intersection of two BSTs. Hint: you may find it useful to use
        'union' from above. *)
     let rec intersection (a : elt bst) (b : elt bst) : elt bst =
-      todo (intersection, a, b) (* replace with your solution *)
+      match a with
+      | Leaf -> Leaf
+      | Node (x, l, r) ->
+         let left = intersection l b in
+         let right = intersection r b in
+         if elem x b then insert x (union left right)
+         else union left right
 
     (* Convert a list to a BST. *)
     let rec of_list = function
@@ -365,7 +390,35 @@ let rec rbt_forall (pred : 'a -> bool) (t : 'a rbtree) : bool =
   | RBNode (_, x, l, r) -> pred x && rbt_forall pred l && rbt_forall pred r
 
 let rbt_inv (le : 'a -> 'a -> bool) (t : 'a rbtree) : bool =
-  todo (le, t) (* replace with your solution *)
+  let rec red_children_black = function
+    | RBLeaf -> true
+    | RBNode (Red, _, l, r) ->
+        (match l with RBLeaf -> true | RBNode (c, _, _, _) -> c = Black) &&
+        (match r with RBLeaf -> true | RBNode (c, _, _, _) -> c = Black) &&
+        red_children_black l && red_children_black r
+    | RBNode (Black, _, l, r) -> red_children_black l && red_children_black r
+  in
+  let rec black_height = function
+    | RBLeaf -> 1
+    | RBNode (c, _, l, r) ->
+        let hl = black_height l in
+        let hr = black_height r in
+        if hl = hr then if c = Black then hl + 1 else hl else 0
+  in
+  let rec bst_ok = function
+    | RBLeaf -> true
+    | RBNode (_, x, l, r) ->
+        rbt_forall (fun y -> le y x) l &&
+        rbt_forall (fun y -> le x y) r &&
+        bst_ok l && bst_ok r
+  in
+  let root_black = function
+    | RBLeaf -> true
+    | RBNode (c, _, _, _) -> c = Black
+  in
+  match t with
+  | RBLeaf -> true
+  | RBNode _ -> root_black t && red_children_black t && black_height t <> 0 && bst_ok t
 
 let () = add_test "rbt_inv" @@
            fun _ ->
@@ -429,12 +482,20 @@ module RbtSet : functor (Ord : OType) ->
     (** 10. (5 pts) Write a 'union' function for taking the union of
        two RBTs. Hint: similar to #6. *)
     let rec union (a : elt rbtree) (b : elt rbtree) : elt rbtree =
-      todo (union, a, b) (* replace with your solution *)
+      match b with
+      | RBLeaf -> a
+      | RBNode (_, x, l, r) -> union (union (insert x a) l) r
 
     (** 11. (5 pts) Write an 'intersection' function for taking the
        intersection of two RBTs. Hint: similar to #7. *)
     let rec intersection (a : elt rbtree) (b : elt rbtree) : elt rbtree =
-      todo (intersection, a, b) (* replace with your solution *)
+      match a with
+      | RBLeaf -> RBLeaf
+      | RBNode (_, x, l, r) ->
+         let left = intersection l b in
+         let right = intersection r b in
+         if elem x b then insert x (union left right)
+         else union left right
 
     let rec of_list l =
       match l with
