@@ -1,0 +1,4 @@
+(test
+ (name pa3)
+ (flags (:standard -alert -deprecated))
+ (libraries pa3 alcotest))

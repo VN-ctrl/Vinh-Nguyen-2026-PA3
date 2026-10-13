@@ -1,0 +1,7 @@
+(library
+ (name pa3)
+ ; QCheck.small_list is deprecated in qcheck >= 0.90, and dune's dev profile
+ ; turns that alert into an error. list_small (the replacement) does not exist
+ ; before 0.90, so silencing the alert is the version-safe fix.
+ (flags (:standard -alert -deprecated))
+ (libraries alcotest qcheck qcheck-alcotest))
